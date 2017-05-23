@@ -107,6 +107,28 @@ jQuery( document ).ready(function () {
 		return true;
 	}
 
+	/*
+	 * Create new guest author if not exists
+	 * @param string Author Data
+	 * @param object The autosuggest input box
+	 */
+    function coauthors_new_author_display( authordata, co ){
+        // Reset placeholder.
+        co.attr( 'value', coAuthorsPlusStrings.search_box_text )
+            .focus( function(){ co.val( '' ) } )
+            .blur( function(){ co.val( coAuthorsPlusStrings.search_box_text ) } );
+
+    	// Ajax Request to create a new guest author.
+    	jQuery.post(coAuthorsPlus_ajax_create_new_user_link, authordata ,function(res){
+    	     // If guest user created successfully.
+    		if( JSON.parse(res).success == true ){
+                coauthors_add_coauthor( authordata, co );
+			}
+
+		});
+
+    	return true;
+    }
 
 	/*
 	 * Add the autosuggest box and text tag to the Co-Authors table
@@ -202,7 +224,25 @@ jQuery( document ).ready(function () {
 		author.nicename = jQuery.trim( vals[4] );
 
 		if ( author.id=='New' ) {
-			coauthors_new_author_display( name );
+
+			// Allow user to enter email address of user.
+            author.email = prompt( coAuthorsPlus_vars.email_prompt );
+
+            var email_filter = /^[\w\-\.\+]+\@[a-zA-Z0-9\.\-]+\.[a-zA-z0-9]{2,4}$/;
+
+            if ( ! author.email || ! email_filter.test( author.email ) ) {
+
+            	alert( coAuthorsPlus_vars.email_invalid );
+                $this.attr( 'value', coAuthorsPlusStrings.search_box_text )
+                    .focus( function(){ $this.val( '' ) } )
+                    .blur( function(){ $this.val( coAuthorsPlusStrings.search_box_text ) } )
+                ;
+                return false;
+			}
+
+            // Create new guest author if not exists.
+            coauthors_new_author_display( author, $this );
+
 		} else {
 			coauthors_add_coauthor( author, $this );
 			// Show the delete button if we now have more than one co-author

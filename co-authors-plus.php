@@ -86,6 +86,9 @@ class CoAuthors_Plus {
 		// Action to set up author auto-suggest
 		add_action( 'wp_ajax_coauthors_ajax_suggest', array( $this, 'ajax_suggest' ) );
 
+		// Action to create user
+		add_action( 'wp_ajax_coauthors_ajax_create_user', array( $this, 'ajax_create_user' ) );
+
 		// Filter to allow coauthors to edit posts
 		add_filter( 'user_has_cap', array( $this, 'filter_user_has_cap' ), 10, 3 );
 
@@ -1075,12 +1078,54 @@ class CoAuthors_Plus {
 
 		$authors = $this->search_authors( $search, $ignore );
 
+		if ( empty( $authors ) ) {
+			$author_display_name = $search;
+			$author_login        = str_replace( " ", "-", $search );
+			echo __( 'New', 'co-authors-plus' ) . ' | ' . $author_login . ' | ' . $author_display_name . "\n";
+
+			die();
+		}
+
 		foreach ( $authors as $author ) {
 			echo esc_html( $author->ID . ' | ' . $author->user_login . ' | ' . $author->display_name . ' | ' . $author->user_email . ' | ' . $author->user_nicename ) . "\n";
 		}
 
 		die();
 
+	}
+
+	/**
+	 * Create new guest author if not exists.
+	 */
+	public function ajax_create_user() {
+		global $coauthors_plus;
+
+		if ( ! isset( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'coauthors-create' ) ) {
+			die();
+		}
+
+		// Get author by user_login.
+		$guest_author = $coauthors_plus->guest_authors->get_guest_author_by( 'user_email', $_POST['email'], true );
+
+		if ( ! $guest_author ){
+			// Get author by user_login.
+			$guest_author = $coauthors_plus->guest_authors->get_guest_author_by( 'user_login', $_POST['login'], true );
+        }
+
+		// If user isn't exists.
+		if ( ! $guest_author ) {
+
+			$guest_author_id = $coauthors_plus->guest_authors->create( array(
+				'display_name' => sanitize_text_field(  $_POST['name'] ),
+				'user_login'   => sanitize_text_field( $_POST['login'] ),
+				'user_email'   => sanitize_email( $_POST['email'] ) ,
+			) );
+
+			if ( $guest_author_id ) {
+				echo wp_json_encode( array( 'success' => true ) );
+			}
+		}
+		die();
 	}
 
 	/**
@@ -1263,6 +1308,21 @@ class CoAuthors_Plus {
 						wp_nonce_url( 'admin-ajax.php', 'coauthors-search' )
 					)
 				); ?>;
+                // AJAX link used for the create new guest user.
+                var coAuthorsPlus_ajax_create_new_user_link = <?php
+					echo wp_json_encode(
+						add_query_arg(
+							array(
+								'action' => 'coauthors_ajax_create_user',
+								'post_type' => rawurlencode( get_post_type() ),
+							),
+							wp_nonce_url( 'admin-ajax.php', 'coauthors-create' )
+						)
+					); ?>;
+                var coAuthorsPlus_vars = {
+                    'email_prompt': "<?php echo __( 'Please enter author\'s email address: ', 'co-authors-plus' ); ?>",
+                    'email_invalid': "<?php echo __( 'Please enter valid email address', 'co-authors-plus' ); ?>"
+                };
 			</script>
 		<?php
 	}
