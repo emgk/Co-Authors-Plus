@@ -900,7 +900,7 @@ class CoAuthors_Plus {
 	 */
 	function filter_wp_get_object_terms( $terms, $object_ids, $taxonomies, $args ) {
 
-		if ( ! isset( $_REQUEST['bulk_edit'] ) || "'author'" !== $taxonomies ) {
+		if ( ! isset( $_REQUEST['bulk_edit'] ) || $this->coauthor_taxonomy !== $taxonomies ) {
 			return $terms;
 		}
 
